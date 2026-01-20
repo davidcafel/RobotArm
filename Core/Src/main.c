@@ -120,30 +120,75 @@ void controlMotor4Task(void *argument);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-uint8_t oldReport[64];
 
+#define buttonYBit 1
+#define buttonBBit 1<<1
+#define buttonABit 1<<2
+#define buttonXBit 1<<3
+#define buttonLBit 1<<4
+#define buttonRBit 1<<5
+#define buttonZLBit 1<<6
+#define buttonZRBit 1<<7
+#define buttonMinusBit 1<<8
+#define buttonPlusBit 1<<9
+#define buttonLJoyStickBit 1<<10
+#define buttonRJoyStickBit 1<<11
+#define buttonHomeBit 1<<12
+#define buttonSelectBit 1<<13
+
+
+typedef enum{
+	NONE = 0b1111,
+	UP = 0b0,
+	UPR = 0b1,
+	RIGHT = 0b10,
+	DOWNR = 0b11,
+	DOWN = 0b100,
+	DOWNL= 0b101,
+	LEFT = 0b110,
+	UPL = 0b111
+} crossDir;
+
+/**
+ * Estructura que almacena el estado actual del control (gamepad).
+ *
+ * Esta estructura se actualiza cuando llega un reporte HID desde el dispositivo USB.
+
+ * Los valores de los joysticks se convierten desde un rango típico de 0..255
+ * a un rango centrado en 0 mediante {@code valor - 128}.
+ */
 struct {
+	crossDir dir;
+	int16_t buttons,joyStickLX,joyStickLY,joyStickRX,joyStickRY;
+} gamepadReport;
 
-} gamePadReport;
-
-
+/**
+ * Callback de evento HID ejecutado por el host USB cuando hay datos nuevos disponibles.
+ *
+ * Esta función lee el reporte HID crudo proveniente del gamepad y actualiza
+ * la estructura global {@code gamepadReport} con el estado actual:
+ *
+ * Conversión de joysticks:
+ * 0   -> -128
+ * 128 -> 0
+ * 255 -> 127
+ *
+ * phost: Puntero/handle del host USB usado por la librería USBH para acceder
+ *              al dispositivo HID y obtener el reporte actual.
+ */
 void USBH_HID_EventCallback(USBH_HandleTypeDef *phost)
 {
     uint8_t report[64];
     uint16_t len = USBH_HID_GetReportData(phost, report, sizeof(report));
     if (len > 0) {
-        // parse report bytes here
+    	gamepadReport.dir = report[2];
+    	gamepadReport.buttons = (uint16_t)report[0] | ((uint16_t)report[1]<<8);
+    	gamepadReport.joyStickLX = (int8_t)((int16_t)report[3] - 128);
+    	gamepadReport.joyStickLY = (int8_t)((int16_t)report[4] - 128);
+    	gamepadReport.joyStickRX = (int8_t)((int16_t)report[5] - 128);
+    	gamepadReport.joyStickRY = (int8_t)((int16_t)report[6] - 128);
     }
-    char a;
-    if (memcmp(report, oldReport, sizeof(report)) != 0) {
-        // Son distintos (al menos un byte cambia)
-    	a=1;
-    } else {
-        // Son iguales (todos los elementos iguales)
-    	a=2;
-    }
-    a++;
-    memcpy(oldReport, report, sizeof(report));
+
 }
 
 /* USER CODE END 0 */
