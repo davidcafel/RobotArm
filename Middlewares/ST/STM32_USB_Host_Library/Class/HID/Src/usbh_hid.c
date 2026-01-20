@@ -103,9 +103,13 @@ static USBH_StatusTypeDef USBH_HID_ClassRequest(USBH_HandleTypeDef *phost);
 static USBH_StatusTypeDef USBH_HID_Process(USBH_HandleTypeDef *phost);
 static USBH_StatusTypeDef USBH_HID_SOFProcess(USBH_HandleTypeDef *phost);
 static void USBH_HID_ParseHIDDesc(HID_DescTypeDef *desc, uint8_t *buf);
+static USBH_StatusTypeDef USBH_HID_GenericInit(USBH_HandleTypeDef *phost);
 
 extern USBH_StatusTypeDef USBH_HID_MouseInit(USBH_HandleTypeDef *phost);
 extern USBH_StatusTypeDef USBH_HID_KeybdInit(USBH_HandleTypeDef *phost);
+
+#define HID_GENERIC_REPORT_MAX_SIZE 64U
+static uint8_t hid_generic_rx_report_buf[HID_GENERIC_REPORT_MAX_SIZE];
 
 USBH_ClassTypeDef  HID_Class =
 {
@@ -143,7 +147,7 @@ static USBH_StatusTypeDef USBH_HID_InterfaceInit(USBH_HandleTypeDef *phost)
   uint8_t num = 0U;
   uint8_t interface;
 
-  interface = USBH_FindInterface(phost, phost->pActiveClass->ClassCode, HID_BOOT_CODE, 0xFFU);
+  interface = USBH_FindInterface(phost, phost->pActiveClass->ClassCode, 0xFFU, 0xFFU);
 
   if ((interface == 0xFFU) || (interface >= USBH_MAX_NUM_INTERFACES)) /* No Valid Interface */
   {
@@ -157,6 +161,12 @@ static USBH_StatusTypeDef USBH_HID_InterfaceInit(USBH_HandleTypeDef *phost)
   {
     return USBH_FAIL;
   }
+
+  USBH_UsrLog("HID itf: class=0x%02X sub=0x%02X proto=0x%02X eps=%u",
+              phost->device.CfgDesc.Itf_Desc[interface].bInterfaceClass,
+              phost->device.CfgDesc.Itf_Desc[interface].bInterfaceSubClass,
+              phost->device.CfgDesc.Itf_Desc[interface].bInterfaceProtocol,
+              phost->device.CfgDesc.Itf_Desc[interface].bNumEndpoints);
 
   phost->pActiveClass->pData = (HID_HandleTypeDef *)USBH_malloc(sizeof(HID_HandleTypeDef));
   HID_Handle = (HID_HandleTypeDef *) phost->pActiveClass->pData;
@@ -182,6 +192,11 @@ static USBH_StatusTypeDef USBH_HID_InterfaceInit(USBH_HandleTypeDef *phost)
   {
     USBH_UsrLog("Mouse device found!");
     HID_Handle->Init = USBH_HID_MouseInit;
+  }
+  else if (phost->device.CfgDesc.Itf_Desc[interface].bInterfaceProtocol == 0x00U)
+  {
+    USBH_UsrLog("Generic HID device found!");
+    HID_Handle->Init = USBH_HID_GenericInit;
   }
   else
   {
@@ -236,6 +251,37 @@ static USBH_StatusTypeDef USBH_HID_InterfaceInit(USBH_HandleTypeDef *phost)
     }
   }
 
+  return USBH_OK;
+}
+
+static USBH_StatusTypeDef USBH_HID_GenericInit(USBH_HandleTypeDef *phost)
+{
+  HID_HandleTypeDef *HID_Handle = (HID_HandleTypeDef *) phost->pActiveClass->pData;
+  uint16_t report_len = HID_Handle->length;
+  uint16_t fifo_size;
+  uint16_t max_fifo;
+
+  if (report_len > sizeof(hid_generic_rx_report_buf))
+  {
+    report_len = (uint16_t)sizeof(hid_generic_rx_report_buf);
+  }
+
+  if (report_len == 0U)
+  {
+    return USBH_FAIL;
+  }
+
+  HID_Handle->length = report_len;
+  HID_Handle->pData = hid_generic_rx_report_buf;
+
+  max_fifo = (uint16_t)sizeof(phost->device.Data);
+  fifo_size = (uint16_t)((max_fifo / report_len) * report_len);
+  if (fifo_size < report_len)
+  {
+    return USBH_FAIL;
+  }
+
+  USBH_HID_FifoInit(&HID_Handle->fifo, phost->device.Data, fifo_size);
   return USBH_OK;
 }
 
@@ -913,6 +959,41 @@ uint16_t USBH_HID_FifoWrite(FIFO_TypeDef *f, void *buf, uint16_t  nbytes)
   f->lock = 0U;
 
   return nbytes;
+}
+
+uint16_t USBH_HID_GetReportData(USBH_HandleTypeDef *phost, uint8_t *buf, uint16_t buf_len)
+{
+  HID_HandleTypeDef *HID_Handle;
+  uint16_t report_len;
+
+  if ((phost == NULL) || (buf == NULL) || (buf_len == 0U))
+  {
+    return 0U;
+  }
+
+  if (phost->pActiveClass == NULL)
+  {
+    return 0U;
+  }
+
+  HID_Handle = (HID_HandleTypeDef *) phost->pActiveClass->pData;
+  if ((HID_Handle == NULL) || (HID_Handle->length == 0U) || (HID_Handle->fifo.buf == NULL))
+  {
+    return 0U;
+  }
+
+  report_len = HID_Handle->length;
+  if (report_len > buf_len)
+  {
+    report_len = buf_len;
+  }
+
+  if (USBH_HID_FifoRead(&HID_Handle->fifo, buf, report_len) != report_len)
+  {
+    return 0U;
+  }
+
+  return report_len;
 }
 
 /**

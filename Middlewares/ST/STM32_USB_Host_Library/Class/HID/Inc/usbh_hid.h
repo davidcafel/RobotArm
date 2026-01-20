@@ -314,6 +314,8 @@ uint16_t  USBH_HID_FifoRead(FIFO_TypeDef *f, void *buf, uint16_t  nbytes);
 
 uint16_t  USBH_HID_FifoWrite(FIFO_TypeDef *f, void *buf, uint16_t nbytes);
 
+uint16_t  USBH_HID_GetReportData(USBH_HandleTypeDef *phost, uint8_t *buf, uint16_t buf_len);
+
 /**
   * @}
   */

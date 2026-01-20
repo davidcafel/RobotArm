@@ -120,13 +120,30 @@ void controlMotor4Task(void *argument);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-void USBH_HID_EventCallback(USBH_HandleTypeDef *phost){
-	if(USBH_HID_GetDeviceType(phost)==HID_KEYBOARD){
-		HID_KEYBD_Info_TypeDef *KeyBoard_Info;
-		KeyBoard_Info = USBH_HID_GetKeybdInfo(phost);
-		char key = USBH_HID_GetASCIICode(KeyBoard_Info);
-		key = 'o';
-	}
+uint8_t oldReport[64];
+
+struct {
+
+} gamePadReport;
+
+
+void USBH_HID_EventCallback(USBH_HandleTypeDef *phost)
+{
+    uint8_t report[64];
+    uint16_t len = USBH_HID_GetReportData(phost, report, sizeof(report));
+    if (len > 0) {
+        // parse report bytes here
+    }
+    char a;
+    if (memcmp(report, oldReport, sizeof(report)) != 0) {
+        // Son distintos (al menos un byte cambia)
+    	a=1;
+    } else {
+        // Son iguales (todos los elementos iguales)
+    	a=2;
+    }
+    a++;
+    memcpy(oldReport, report, sizeof(report));
 }
 
 /* USER CODE END 0 */
