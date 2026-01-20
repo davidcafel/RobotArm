@@ -19,10 +19,11 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "cmsis_os.h"
+#include "usb_host.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "usbh_hid.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -45,13 +46,11 @@ TIM_HandleTypeDef htim3;
 
 UART_HandleTypeDef huart3;
 
-PCD_HandleTypeDef hpcd_USB_OTG_FS;
-
 /* Definitions for defaultTask */
 osThreadId_t defaultTaskHandle;
 const osThreadAttr_t defaultTask_attributes = {
   .name = "defaultTask",
-  .stack_size = 128 * 4,
+  .stack_size = 1024 * 4,
   .priority = (osPriority_t) osPriorityNormal,
 };
 /* Definitions for UartRx */
@@ -107,7 +106,6 @@ const osEventFlagsAttr_t triggerMotor1Control_attributes = {
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_USART3_UART_Init(void);
-static void MX_USB_OTG_FS_PCD_Init(void);
 static void MX_TIM3_Init(void);
 void StartDefaultTask(void *argument);
 void uartRxDataManagement(void *argument);
@@ -122,6 +120,14 @@ void controlMotor4Task(void *argument);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+void USBH_HID_EventCallback(USBH_HandleTypeDef *phost){
+	if(USBH_HID_GetDeviceType(phost)==HID_KEYBOARD){
+		HID_KEYBD_Info_TypeDef *KeyBoard_Info;
+		KeyBoard_Info = USBH_HID_GetKeybdInfo(phost);
+		char key = USBH_HID_GetASCIICode(KeyBoard_Info);
+		key = 'o';
+	}
+}
 
 /* USER CODE END 0 */
 
@@ -155,7 +161,6 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_USART3_UART_Init();
-  MX_USB_OTG_FS_PCD_Init();
   MX_TIM3_Init();
   /* USER CODE BEGIN 2 */
 
@@ -369,42 +374,6 @@ static void MX_USART3_UART_Init(void)
 }
 
 /**
-  * @brief USB_OTG_FS Initialization Function
-  * @param None
-  * @retval None
-  */
-static void MX_USB_OTG_FS_PCD_Init(void)
-{
-
-  /* USER CODE BEGIN USB_OTG_FS_Init 0 */
-
-  /* USER CODE END USB_OTG_FS_Init 0 */
-
-  /* USER CODE BEGIN USB_OTG_FS_Init 1 */
-
-  /* USER CODE END USB_OTG_FS_Init 1 */
-  hpcd_USB_OTG_FS.Instance = USB_OTG_FS;
-  hpcd_USB_OTG_FS.Init.dev_endpoints = 6;
-  hpcd_USB_OTG_FS.Init.speed = PCD_SPEED_FULL;
-  hpcd_USB_OTG_FS.Init.dma_enable = DISABLE;
-  hpcd_USB_OTG_FS.Init.phy_itface = PCD_PHY_EMBEDDED;
-  hpcd_USB_OTG_FS.Init.Sof_enable = ENABLE;
-  hpcd_USB_OTG_FS.Init.low_power_enable = DISABLE;
-  hpcd_USB_OTG_FS.Init.lpm_enable = DISABLE;
-  hpcd_USB_OTG_FS.Init.battery_charging_enable = ENABLE;
-  hpcd_USB_OTG_FS.Init.vbus_sensing_enable = ENABLE;
-  hpcd_USB_OTG_FS.Init.use_dedicated_ep1 = DISABLE;
-  if (HAL_PCD_Init(&hpcd_USB_OTG_FS) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /* USER CODE BEGIN USB_OTG_FS_Init 2 */
-
-  /* USER CODE END USB_OTG_FS_Init 2 */
-
-}
-
-/**
   * @brief GPIO Initialization Function
   * @param None
   * @retval None
@@ -526,6 +495,8 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
 /* USER CODE END Header_StartDefaultTask */
 void StartDefaultTask(void *argument)
 {
+  /* init code for USB_HOST */
+  MX_USB_HOST_Init();
   /* USER CODE BEGIN 5 */
 	HAL_UART_Receive_IT(&huart3, &rxBuffer, RX_BUFFER_SIZE);
 
@@ -538,7 +509,7 @@ void StartDefaultTask(void *argument)
 
 	for (;;) {
 		HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_0);  // Conmutar el estado del LED1
-		osDelay(500);
+		osDelay(45);
 
 	}
   /* USER CODE END 5 */

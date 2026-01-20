@@ -27,9 +27,8 @@ Core/Src/main.o: ../Core/Src/main.c ../Core/Inc/main.h \
  ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_tim.h \
  ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_tim_ex.h \
  ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_uart.h \
- ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_pcd.h \
+ ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_hcd.h \
  ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_ll_usb.h \
- ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_pcd_ex.h \
  ../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2/cmsis_os.h \
  ../Middlewares/Third_Party/FreeRTOS/Source/include/FreeRTOS.h \
  ../Core/Inc/FreeRTOSConfig.h \
@@ -40,7 +39,19 @@ Core/Src/main.o: ../Core/Src/main.c ../Core/Inc/main.h \
  ../Middlewares/Third_Party/FreeRTOS/Source/include/mpu_wrappers.h \
  ../Middlewares/Third_Party/FreeRTOS/Source/include/task.h \
  ../Middlewares/Third_Party/FreeRTOS/Source/include/list.h \
- ../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2/cmsis_os2.h
+ ../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2/cmsis_os2.h \
+ ../USB_HOST/App/usb_host.h \
+ ../Middlewares/ST/STM32_USB_Host_Library/Class/HID/Inc/usbh_hid.h \
+ ../Middlewares/ST/STM32_USB_Host_Library/Core/Inc/usbh_core.h \
+ ../USB_HOST/Target/usbh_conf.h \
+ ../Middlewares/ST/STM32_USB_Host_Library/Core/Inc/usbh_def.h \
+ ../Middlewares/ST/STM32_USB_Host_Library/Core/Inc/usbh_ioreq.h \
+ ../Middlewares/ST/STM32_USB_Host_Library/Core/Inc/usbh_core.h \
+ ../Middlewares/ST/STM32_USB_Host_Library/Core/Inc/usbh_pipes.h \
+ ../Middlewares/ST/STM32_USB_Host_Library/Core/Inc/usbh_ctlreq.h \
+ ../Middlewares/ST/STM32_USB_Host_Library/Class/HID/Inc/usbh_hid_mouse.h \
+ ../Middlewares/ST/STM32_USB_Host_Library/Class/HID/Inc/usbh_hid.h \
+ ../Middlewares/ST/STM32_USB_Host_Library/Class/HID/Inc/usbh_hid_keybd.h
 ../Core/Inc/main.h:
 ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal.h:
 ../Core/Inc/stm32f4xx_hal_conf.h:
@@ -70,9 +81,8 @@ Core/Src/main.o: ../Core/Src/main.c ../Core/Inc/main.h \
 ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_tim.h:
 ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_tim_ex.h:
 ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_uart.h:
-../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_pcd.h:
+../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_hcd.h:
 ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_ll_usb.h:
-../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_pcd_ex.h:
 ../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2/cmsis_os.h:
 ../Middlewares/Third_Party/FreeRTOS/Source/include/FreeRTOS.h:
 ../Core/Inc/FreeRTOSConfig.h:
@@ -84,3 +94,15 @@ Core/Src/main.o: ../Core/Src/main.c ../Core/Inc/main.h \
 ../Middlewares/Third_Party/FreeRTOS/Source/include/task.h:
 ../Middlewares/Third_Party/FreeRTOS/Source/include/list.h:
 ../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2/cmsis_os2.h:
+../USB_HOST/App/usb_host.h:
+../Middlewares/ST/STM32_USB_Host_Library/Class/HID/Inc/usbh_hid.h:
+../Middlewares/ST/STM32_USB_Host_Library/Core/Inc/usbh_core.h:
+../USB_HOST/Target/usbh_conf.h:
+../Middlewares/ST/STM32_USB_Host_Library/Core/Inc/usbh_def.h:
+../Middlewares/ST/STM32_USB_Host_Library/Core/Inc/usbh_ioreq.h:
+../Middlewares/ST/STM32_USB_Host_Library/Core/Inc/usbh_core.h:
+../Middlewares/ST/STM32_USB_Host_Library/Core/Inc/usbh_pipes.h:
+../Middlewares/ST/STM32_USB_Host_Library/Core/Inc/usbh_ctlreq.h:
+../Middlewares/ST/STM32_USB_Host_Library/Class/HID/Inc/usbh_hid_mouse.h:
+../Middlewares/ST/STM32_USB_Host_Library/Class/HID/Inc/usbh_hid.h:
+../Middlewares/ST/STM32_USB_Host_Library/Class/HID/Inc/usbh_hid_keybd.h:
