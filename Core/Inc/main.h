@@ -75,10 +75,10 @@ void Error_Handler(void);
 #define Step3_GPIO_Port GPIOA
 #define LD1_Pin GPIO_PIN_0
 #define LD1_GPIO_Port GPIOB
-#define Step1_Pin GPIO_PIN_0
-#define Step1_GPIO_Port GPIOG
 #define EnableMotor1_Pin GPIO_PIN_1
 #define EnableMotor1_GPIO_Port GPIOG
+#define STEP1_Pin GPIO_PIN_14
+#define STEP1_GPIO_Port GPIOE
 #define LD3_Pin GPIO_PIN_14
 #define LD3_GPIO_Port GPIOB
 #define STLK_RX_Pin GPIO_PIN_8
