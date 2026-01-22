@@ -44,6 +44,7 @@
 
 /* Private variables ---------------------------------------------------------*/
 TIM_HandleTypeDef htim3;
+TIM_HandleTypeDef htim5;
 TIM_HandleTypeDef htim11;
 
 UART_HandleTypeDef huart3;
@@ -122,6 +123,7 @@ static void MX_GPIO_Init(void);
 static void MX_USART3_UART_Init(void);
 static void MX_TIM3_Init(void);
 static void MX_TIM11_Init(void);
+static void MX_TIM5_Init(void);
 void StartDefaultTask(void *argument);
 void uartRxDataManagement(void *argument);
 void controlMotor1Task(void *argument);
@@ -153,7 +155,7 @@ void StartInputChangeTask(void *argument);
 #define buttonSelectBit 1<<13
 
 typedef enum {
-	NONE = 0b1111,
+	CENTER = 0b1111,
 	UP = 0b0,
 	UPR = 0b1,
 	RIGHT = 0b10,
@@ -348,6 +350,14 @@ void checkDifferencesInJoySticks() {
 			&& previousReport.buttons & buttonLBit)
 		pushEventIntoQueue(GP_EVENT_RELEASE_L, 0);
 	//******************************************************************
+	//Boton R para arranque y apagado motor 3
+	if (currentReport.buttons & buttonRBit
+			&& !(previousReport.buttons & buttonRBit))
+		pushEventIntoQueue(GP_EVENT_PRESS_R, 0);
+	if (!(currentReport.buttons & buttonRBit)
+			&& previousReport.buttons & buttonRBit)
+		pushEventIntoQueue(GP_EVENT_RELEASE_R, 0);
+	//******************************************************************
 	//Joystick izq, eje Y
 	currDir = (currentReport.joyStickLY > 0) - (currentReport.joyStickLY < 0); // 1=arriba, 0= centro, -1=abajo
 	previousDir = (previousReport.joyStickLY > 0)
@@ -381,6 +391,23 @@ void checkDifferencesInJoySticks() {
 //	if(currDir == -1 && previousDir == -1) pushEventIntoQueue(GP_EVENT_RJS_HOLD_DOWN, 0);
 	if (currDir != -1 && previousDir == -1)
 		pushEventIntoQueue(GP_EVENT_RJS_RELEASE_DOWN, 0);
+
+	//******************************************************************
+	//DPAD, eje Y
+	currDir = (currentReport.dir == UP || currentReport.dir == UPR || currentReport.dir == UPL)
+			-(currentReport.dir == DOWN || currentReport.dir == DOWNR || currentReport.dir == DOWNL);
+	previousDir = (previousReport.dir == UP || previousReport.dir == UPR || previousReport.dir == UPL)
+			-(previousReport.dir == DOWN || previousReport.dir == DOWNR || previousReport.dir == DOWNL);
+
+	if (currDir == 1 && previousDir != 1)
+		pushEventIntoQueue(GP_EVENT_DPAD_PRESS_UP, 0);
+	if (currDir != 1 && previousDir == 1)
+		pushEventIntoQueue(GP_EVENT_DPAD_RELEASE_UP, 0);
+
+	if (currDir == -1 && previousDir != -1)
+		pushEventIntoQueue(GP_EVENT_DPAD_PRESS_DOWN, 0);
+	if (currDir != -1 && previousDir == -1)
+		pushEventIntoQueue(GP_EVENT_DPAD_RELEASE_DOWN, 0);
 }
 
 /* USER CODE END 0 */
@@ -417,6 +444,7 @@ int main(void)
   MX_USART3_UART_Init();
   MX_TIM3_Init();
   MX_TIM11_Init();
+  MX_TIM5_Init();
   /* USER CODE BEGIN 2 */
 
   /* USER CODE END 2 */
@@ -587,7 +615,7 @@ static void MX_TIM3_Init(void)
     Error_Handler();
   }
   sConfigOC.OCMode = TIM_OCMODE_PWM1;
-  sConfigOC.Pulse = 0;
+  sConfigOC.Pulse = 1021;
   sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
   sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
   if (HAL_TIM_PWM_ConfigChannel(&htim3, &sConfigOC, TIM_CHANNEL_4) != HAL_OK)
@@ -598,6 +626,65 @@ static void MX_TIM3_Init(void)
 
   /* USER CODE END TIM3_Init 2 */
   HAL_TIM_MspPostInit(&htim3);
+
+}
+
+/**
+  * @brief TIM5 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM5_Init(void)
+{
+
+  /* USER CODE BEGIN TIM5_Init 0 */
+
+  /* USER CODE END TIM5_Init 0 */
+
+  TIM_ClockConfigTypeDef sClockSourceConfig = {0};
+  TIM_MasterConfigTypeDef sMasterConfig = {0};
+  TIM_OC_InitTypeDef sConfigOC = {0};
+
+  /* USER CODE BEGIN TIM5_Init 1 */
+
+  /* USER CODE END TIM5_Init 1 */
+  htim5.Instance = TIM5;
+  htim5.Init.Prescaler = 47;
+  htim5.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim5.Init.Period = 20000;
+  htim5.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim5.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim5) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+  if (HAL_TIM_ConfigClockSource(&htim5, &sClockSourceConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  if (HAL_TIM_PWM_Init(&htim5) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim5, &sMasterConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sConfigOC.OCMode = TIM_OCMODE_PWM1;
+  sConfigOC.Pulse = 10000;
+  sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
+  sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
+  if (HAL_TIM_PWM_ConfigChannel(&htim5, &sConfigOC, TIM_CHANNEL_4) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM5_Init 2 */
+
+  /* USER CODE END TIM5_Init 2 */
+  HAL_TIM_MspPostInit(&htim5);
 
 }
 
@@ -633,7 +720,7 @@ static void MX_TIM11_Init(void)
     Error_Handler();
   }
   sConfigOC.OCMode = TIM_OCMODE_PWM1;
-  sConfigOC.Pulse = 0;
+  sConfigOC.Pulse = 1021;
   sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
   sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
   if (HAL_TIM_PWM_ConfigChannel(&htim11, &sConfigOC, TIM_CHANNEL_1) != HAL_OK)
@@ -704,7 +791,7 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_WritePin(GPIOF, Dir2_Pin|EnableMotor2_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOC, Step3_Pin|Enable4_Pin|Dir4_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOC, Dir3_Pin|Enable4_Pin|Dir4_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOB, LD1_Pin|LD3_Pin|LD2_Pin, GPIO_PIN_RESET);
@@ -728,18 +815,12 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOF, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : Step3_Pin Enable4_Pin Dir4_Pin */
-  GPIO_InitStruct.Pin = Step3_Pin|Enable4_Pin|Dir4_Pin;
+  /*Configure GPIO pins : Dir3_Pin Enable4_Pin Dir4_Pin */
+  GPIO_InitStruct.Pin = Dir3_Pin|Enable4_Pin|Dir4_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
-
-  /*Configure GPIO pin : Dir3_Pin */
-  GPIO_InitStruct.Pin = Dir3_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(Dir3_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pins : LD1_Pin LD3_Pin LD2_Pin */
   GPIO_InitStruct.Pin = LD1_Pin|LD3_Pin|LD2_Pin;
@@ -1027,8 +1108,6 @@ void funcM4() {
 void controlMotor4Task(void *argument)
 {
   /* USER CODE BEGIN controlMotor4Task */
-	//TIM3->CCR4 = 1021; //Funcionaba con 2k
-	TIM3->CCR4 = 1021;
 
 	/* Infinite loop */
 	for (;;) {
@@ -1052,7 +1131,7 @@ void StartInputChangeTask(void *argument)
 {
   /* USER CODE BEGIN StartInputChangeTask */
 	gamepadEvents gamepadEventsBuffer;
-	TIM11->CCR1 = 2021;
+
 	/* Infinite loop */
 	for (;;) {
 		osMessageQueueGet(gamepadChangesQueueHandle, &gamepadEventsBuffer, 0,
@@ -1091,7 +1170,7 @@ void StartInputChangeTask(void *argument)
 			break;
 		case GP_EVENT_RJS_PRESS_UP:
 			HAL_TIM_PWM_Start_IT(&htim11, TIM_CHANNEL_1);
-			HAL_GPIO_WritePin(GPIOF, GPIO_PIN_8, GPIO_PIN_SET);  //Dir pos
+			HAL_GPIO_WritePin(GPIOF, GPIO_PIN_8, GPIO_PIN_RESET);  //Dir pos
 			break;
 		case GP_EVENT_RJS_RELEASE_UP:
 			if (currentReport.joyStickLY == 0)
@@ -1099,13 +1178,33 @@ void StartInputChangeTask(void *argument)
 			break;
 		case GP_EVENT_RJS_PRESS_DOWN:
 			HAL_TIM_PWM_Start_IT(&htim11, TIM_CHANNEL_1);
-			HAL_GPIO_WritePin(GPIOF, GPIO_PIN_8, GPIO_PIN_RESET);  //Dir neg
+			HAL_GPIO_WritePin(GPIOF, GPIO_PIN_8, GPIO_PIN_SET);  //Dir neg
 			break;
 		case GP_EVENT_RJS_RELEASE_DOWN:
 			if (currentReport.joyStickLY == 0)
 				HAL_TIM_PWM_Stop_IT(&htim11, TIM_CHANNEL_1); // Detener el PWM
 			break;
 
+			//MOTOR3
+			case GP_EVENT_RELEASE_R:
+				HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_7); //Conmutar motor 3
+				break;
+			case GP_EVENT_DPAD_PRESS_UP:
+				HAL_TIM_PWM_Start_IT(&htim5, TIM_CHANNEL_4);
+				HAL_GPIO_WritePin(GPIOC, GPIO_PIN_0, GPIO_PIN_RESET);  //Dir arriba
+				break;
+			case GP_EVENT_DPAD_RELEASE_UP:
+				if (currentReport.dir == CENTER)
+					HAL_TIM_PWM_Stop_IT(&htim5, TIM_CHANNEL_4); // Detener el PWM
+				break;
+			case GP_EVENT_DPAD_PRESS_DOWN:
+				HAL_TIM_PWM_Start_IT(&htim5, TIM_CHANNEL_4);
+				HAL_GPIO_WritePin(GPIOC, GPIO_PIN_0, GPIO_PIN_SET);  //Dir abajo
+				break;
+			case GP_EVENT_DPAD_RELEASE_DOWN:
+				if (currentReport.dir == CENTER)
+					HAL_TIM_PWM_Stop_IT(&htim5, TIM_CHANNEL_4); // Detener el PWM
+				break;
 
 		case NOEVENT:
 			break;

@@ -69,10 +69,10 @@ void Error_Handler(void);
 #define EnableMotor2_GPIO_Port GPIOF
 #define MCO_Pin GPIO_PIN_0
 #define MCO_GPIO_Port GPIOH
-#define Step3_Pin GPIO_PIN_0
-#define Step3_GPIO_Port GPIOC
-#define Dir3_Pin GPIO_PIN_3
-#define Dir3_GPIO_Port GPIOA
+#define Dir3_Pin GPIO_PIN_0
+#define Dir3_GPIO_Port GPIOC
+#define Step3_Pin GPIO_PIN_3
+#define Step3_GPIO_Port GPIOA
 #define LD1_Pin GPIO_PIN_0
 #define LD1_GPIO_Port GPIOB
 #define Step1_Pin GPIO_PIN_0
