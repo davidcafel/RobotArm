@@ -33,8 +33,9 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-#define CONTROLBYSTEPS 0 //Define si controlar los motores por pasos (para depurar desde el pc,
-//controlar su posición, o si por el contrario ser controlado por el mando
+#define MANUALCONTROL 1 //Define si el programa se encargara de controlar el brazo, o habra control manual
+#define MANUALCONTROLTYPE 0 //Define si usar control manual (por gamepad) (0), remoto (por uart)(1)
+
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -254,14 +255,6 @@ typedef enum {
 
 } gamepadEvents;
 
-/**
- * Estructura que almacena el estado actual del control (gamepad).
- *
- * Esta estructura se actualiza cuando llega un reporte HID desde el dispositivo USB.
-
- * Los valores de los joysticks se convierten desde un rango típico de 0..255
- * a un rango centrado en 0 mediante {@code valor - 128}.
- */
 typedef struct {
 	crossDir dir;
 	int16_t buttons, joyStickLX, joyStickLY, joyStickRX, joyStickRY;
@@ -959,7 +952,7 @@ void uartRxDataManagement(void *argument) {
 	for (;;) {
 		osMessageQueueGet(rxQueueHandle, &rxBuffer, 4, osWaitForever);
 		HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_7); // Conmutar el estado del LED2 azul
-		if (CONTROLBYSTEPS) {
+		if (MANUALCONTROLTYPE) {
 			switch (rxBuffer[0]) {
 			case 'M': //Mover motor 1
 				if (rxBuffer[1])
@@ -1000,16 +993,19 @@ void uartRxDataManagement(void *argument) {
 			case 'T': //Encender o apagar motor
 				switch (rxBuffer[1]) {
 				case 1:
-					HAL_GPIO_TogglePin(GPIOG, GPIO_PIN_1); //Conmutar motor 1
+					HAL_GPIO_TogglePin(EnableMotor1_GPIO_Port,
+							EnableMotor1_Pin); //Conmutar motor 1
 					break;
 				case 2:
-					HAL_GPIO_TogglePin(GPIOF, GPIO_PIN_9); //Conmutar motor 2
+					HAL_GPIO_TogglePin(EnableMotor2_GPIO_Port,
+							EnableMotor2_Pin); //Conmutar motor 2
 					break;
 				case 3:
-					HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_7); //Conmutar motor 3
+					HAL_GPIO_TogglePin(EnableMotor3_GPIO_Port,
+							EnableMotor3_Pin); //Conmutar motor 3
 					break;
 				case 4:
-					HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_8); //Conmutar motor 4
+					HAL_GPIO_TogglePin(Enable4_GPIO_Port, Enable4_Pin); //Conmutar motor 4
 					break;
 				default:
 					break;
@@ -1025,7 +1021,19 @@ void uartRxDataManagement(void *argument) {
 }
 
 /* USER CODE BEGIN Header_controlMotor1Task */
-//TODO
+void funcM1() {
+	HAL_GPIO_WritePin(LD3_GPIO_Port, LD3_Pin, 1); //Led rojo
+	if (stepsToMakeMotor1 > 0) {
+		HAL_GPIO_WritePin(Dir1_GPIO_Port, Dir1_Pin, GPIO_PIN_SET);  //Dir pos
+		stepsToMakeMotor1--;
+	} else if (stepsToMakeMotor1 < 0) {
+		HAL_GPIO_WritePin(Dir1_GPIO_Port, Dir1_Pin, GPIO_PIN_RESET);  //Dir neg
+		stepsToMakeMotor1++;
+	} else {
+		HAL_TIM_PWM_Stop_IT(&htim1, TIM_CHANNEL_4); // Detener el PWM
+		HAL_GPIO_WritePin(LD3_GPIO_Port, LD3_Pin, 0); //Led rojo
+	}
+}
 /* USER CODE END Header_controlMotor1Task */
 void controlMotor1Task(void *argument) {
 	/* USER CODE BEGIN controlMotor1Task */
@@ -1033,32 +1041,27 @@ void controlMotor1Task(void *argument) {
 	for (;;) {
 		osEventFlagsWait(stepperTriggerHandle, 1, osFlagsWaitAny,
 		osWaitForever);
-		HAL_GPIO_WritePin(GPIOB, GPIO_PIN_14, GPIO_PIN_SET); //Led rojo
+		HAL_TIM_PWM_Start_IT(&htim1, TIM_CHANNEL_4);
 
-		for (;;) {
-			if (stepsToMakeMotor1 > 0) {
-				HAL_GPIO_WritePin(GPIOD, GPIO_PIN_1, GPIO_PIN_SET);  //Dir pos
-				stepsToMakeMotor1--;
-			} else if (stepsToMakeMotor1 < 0) {
-				HAL_GPIO_WritePin(GPIOD, GPIO_PIN_1, GPIO_PIN_RESET);  //Dir neg
-				stepsToMakeMotor1++;
-			} else {
-				break;
-			}
-
-			HAL_GPIO_TogglePin(GPIOG, GPIO_PIN_0); //Avanzar el servo medio step
-			osDelay(1); //TODO cambiar este valor para cambiar la velocidad
-			HAL_GPIO_TogglePin(GPIOG, GPIO_PIN_0); //Avanzar el servo medio step
-			osDelay(1); //TODO cambiar este valor para cambiar la velocidad
-		}
-		HAL_GPIO_WritePin(GPIOB, GPIO_PIN_14, GPIO_PIN_RESET); //Led rojo
 		osEventFlagsClear(stepperTriggerHandle, 1);
 	}
 	/* USER CODE END controlMotor1Task */
 }
 
 /* USER CODE BEGIN Header_controlMotor2Task */
-int motor2Speed = 5;
+void funcM2() {
+	HAL_GPIO_WritePin(LD3_GPIO_Port, LD3_Pin, 1); //Led rojo
+	if (stepsToMakeMotor2 > 0) {
+		HAL_GPIO_WritePin(Dir2_GPIO_Port, Dir2_Pin, GPIO_PIN_SET);  //Dir pos
+		stepsToMakeMotor2--;
+	} else if (stepsToMakeMotor2 < 0) {
+		HAL_GPIO_WritePin(Dir2_GPIO_Port, Dir2_Pin, GPIO_PIN_RESET);  //Dir neg
+		stepsToMakeMotor2++;
+	} else {
+		HAL_TIM_PWM_Stop_IT(&htim11, TIM_CHANNEL_1); // Detener el PWM
+		HAL_GPIO_WritePin(LD3_GPIO_Port, LD3_Pin, 0); //Led rojo
+	}
+}
 /* USER CODE END Header_controlMotor2Task */
 void controlMotor2Task(void *argument) {
 	/* USER CODE BEGIN controlMotor2Task */
@@ -1066,39 +1069,27 @@ void controlMotor2Task(void *argument) {
 	for (;;) {
 		osEventFlagsWait(stepperTriggerHandle, 2, osFlagsWaitAny,
 		osWaitForever);
-		HAL_GPIO_WritePin(GPIOB, GPIO_PIN_14, GPIO_PIN_SET); //Led rojo
+		HAL_TIM_PWM_Start_IT(&htim11, TIM_CHANNEL_1);
 
-		for (;;) {
-			if (stepsToMakeMotor2 > 0) {
-				HAL_GPIO_WritePin(GPIOF, GPIO_PIN_8, GPIO_PIN_SET);  //Dir pos
-				stepsToMakeMotor2--;
-				motor2Speed = 75;
-			} else if (stepsToMakeMotor2 < 0) {
-				HAL_GPIO_WritePin(GPIOF, GPIO_PIN_8, GPIO_PIN_RESET);  //Dir neg
-				stepsToMakeMotor2++;
-				motor2Speed = 5;
-			} else {
-				break;
-			}
-
-			HAL_GPIO_TogglePin(GPIOF, GPIO_PIN_7); //Avanzar el servo medio step
-			osDelay(1); //TODO cambiar este valor para cambiar la velocidad
-			HAL_GPIO_TogglePin(GPIOF, GPIO_PIN_7); //Avanzar el servo medio step
-			osDelay(1); //TODO cambiar este valor para cambiar la velocidad
-
-		}
-		HAL_GPIO_WritePin(GPIOB, GPIO_PIN_14, GPIO_PIN_RESET); //Led rojo
 		osEventFlagsClear(stepperTriggerHandle, 2);
 	}
 	/* USER CODE END controlMotor2Task */
 }
 
 /* USER CODE BEGIN Header_controlMotor3Task */
-/**
- * @brief Function implementing the controlMotor3 thread.
- * @param argument: Not used
- * @retval None
- */
+void funcM3() {
+	HAL_GPIO_WritePin(LD3_GPIO_Port, LD3_Pin, 1); //Led rojo
+	if (stepsToMakeMotor3 > 0) {
+		HAL_GPIO_WritePin(Dir3_GPIO_Port, Dir3_Pin, GPIO_PIN_SET);  //Dir pos
+		stepsToMakeMotor3--;
+	} else if (stepsToMakeMotor3 < 0) {
+		HAL_GPIO_WritePin(Dir3_GPIO_Port, Dir3_Pin, GPIO_PIN_RESET);  //Dir neg
+		stepsToMakeMotor3++;
+	} else {
+		HAL_TIM_PWM_Stop_IT(&htim5, TIM_CHANNEL_4); // Detener el PWM
+		HAL_GPIO_WritePin(LD3_GPIO_Port, LD3_Pin, 0); //Led rojo
+	}
+}
 /* USER CODE END Header_controlMotor3Task */
 void controlMotor3Task(void *argument) {
 	/* USER CODE BEGIN controlMotor3Task */
@@ -1106,24 +1097,8 @@ void controlMotor3Task(void *argument) {
 	for (;;) {
 		osEventFlagsWait(stepperTriggerHandle, 4, osFlagsWaitAny,
 		osWaitForever);
+		HAL_TIM_PWM_Start_IT(&htim5, TIM_CHANNEL_4);
 
-		for (;;) {
-			if (stepsToMakeMotor3 > 0) {
-				HAL_GPIO_WritePin(GPIOF, GPIO_PIN_8, GPIO_PIN_SET);  //Dir pos
-				stepsToMakeMotor3--;
-			} else if (stepsToMakeMotor3 < 0) {
-				HAL_GPIO_WritePin(GPIOF, GPIO_PIN_8, GPIO_PIN_RESET);  //Dir neg
-				stepsToMakeMotor3++;
-			} else {
-				break;
-			}
-
-			HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_0); //Avanzar el servo medio step
-			osDelay(75); //TODO cambiar este valor para cambiar la velocidad
-			HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_0); //Avanzar el servo medio step
-			osDelay(75); //TODO cambiar este valor para cambiar la velocidad
-		}
-		HAL_GPIO_WritePin(GPIOB, GPIO_PIN_14, GPIO_PIN_RESET); //Led rojo
 		osEventFlagsClear(stepperTriggerHandle, 4);
 	}
 	/* USER CODE END controlMotor3Task */
@@ -1131,16 +1106,16 @@ void controlMotor3Task(void *argument) {
 
 /* USER CODE BEGIN Header_controlMotor4Task */
 void funcM4() {
-	HAL_GPIO_WritePin(GPIOB, GPIO_PIN_14, 1); //Led rojo
+	HAL_GPIO_WritePin(LD3_GPIO_Port, LD3_Pin, 1); //Led rojo
 	if (stepsToMakeMotor4 > 0) {
-		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_10, GPIO_PIN_SET);  //Dir pos
+		HAL_GPIO_WritePin(Dir4_GPIO_Port, Dir4_Pin, GPIO_PIN_SET);  //Dir pos
 		stepsToMakeMotor4--;
 	} else if (stepsToMakeMotor4 < 0) {
-		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_10, GPIO_PIN_RESET);  //Dir neg
+		HAL_GPIO_WritePin(Dir4_GPIO_Port, Dir4_Pin, GPIO_PIN_RESET);  //Dir neg
 		stepsToMakeMotor4++;
 	} else {
 		HAL_TIM_PWM_Stop_IT(&htim3, TIM_CHANNEL_4); // Detener el PWM en el canal 4
-		HAL_GPIO_WritePin(GPIOB, GPIO_PIN_14, 0); //Led rojo
+		HAL_GPIO_WritePin(LD3_GPIO_Port, LD3_Pin, 0); //Led rojo
 	}
 }
 /* USER CODE END Header_controlMotor4Task */
@@ -1179,7 +1154,7 @@ void StartInputChangeTask(void *argument) {
 		case GP_EVENT_LJS_PRESS_RIGHT:
 			//Activar el timer del motor4
 			HAL_TIM_PWM_Start_IT(&htim3, TIM_CHANNEL_4);
-			HAL_GPIO_WritePin(GPIOC, GPIO_PIN_10, GPIO_PIN_SET);  //Dir pos
+			HAL_GPIO_WritePin(Dir4_GPIO_Port, Dir4_Pin, GPIO_PIN_SET); //Dir pos
 			break;
 		case GP_EVENT_LJS_RELEASE_RIGHT:
 			//Desactivar el timer del motor4
@@ -1189,7 +1164,7 @@ void StartInputChangeTask(void *argument) {
 		case GP_EVENT_LJS_PRESS_LEFT:
 			//Activar el timer del motor4
 			HAL_TIM_PWM_Start_IT(&htim3, TIM_CHANNEL_4);
-			HAL_GPIO_WritePin(GPIOC, GPIO_PIN_10, GPIO_PIN_RESET);  //Dir pos
+			HAL_GPIO_WritePin(Dir4_GPIO_Port, Dir4_Pin, GPIO_PIN_RESET); //Dir pos
 			break;
 		case GP_EVENT_LJS_RELEASE_LEFT:
 			//Desactivar el timer del motor4
@@ -1197,16 +1172,16 @@ void StartInputChangeTask(void *argument) {
 				HAL_TIM_PWM_Stop_IT(&htim3, TIM_CHANNEL_4); // Detener el PWM en el canal 4
 			break;
 		case GP_EVENT_RELEASE_ZL:
-			HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_8); //Conmutar motor 4 (base)
+			HAL_GPIO_TogglePin(Enable4_GPIO_Port, Enable4_Pin); //Conmutar motor 4 (base)
 			break;
 
 			//MOTOR2
 		case GP_EVENT_RELEASE_L:
-			HAL_GPIO_TogglePin(GPIOF, GPIO_PIN_9); //Conmutar motor 2
+			HAL_GPIO_TogglePin(EnableMotor2_GPIO_Port, EnableMotor2_Pin); //Conmutar motor 2
 			break;
 		case GP_EVENT_RJS_PRESS_UP:
 			HAL_TIM_PWM_Start_IT(&htim11, TIM_CHANNEL_1);
-			HAL_GPIO_WritePin(GPIOF, GPIO_PIN_8, GPIO_PIN_RESET);  //Dir pos
+			HAL_GPIO_WritePin(Dir2_GPIO_Port, Dir2_Pin, GPIO_PIN_RESET); //Dir pos
 			break;
 		case GP_EVENT_RJS_RELEASE_UP:
 			if (currentReport.joyStickLY == 0)
@@ -1214,7 +1189,7 @@ void StartInputChangeTask(void *argument) {
 			break;
 		case GP_EVENT_RJS_PRESS_DOWN:
 			HAL_TIM_PWM_Start_IT(&htim11, TIM_CHANNEL_1);
-			HAL_GPIO_WritePin(GPIOF, GPIO_PIN_8, GPIO_PIN_SET);  //Dir neg
+			HAL_GPIO_WritePin(Dir2_GPIO_Port, Dir2_Pin, GPIO_PIN_SET); //Dir neg
 			break;
 		case GP_EVENT_RJS_RELEASE_DOWN:
 			if (currentReport.joyStickLY == 0)
@@ -1223,11 +1198,11 @@ void StartInputChangeTask(void *argument) {
 
 			//MOTOR3
 		case GP_EVENT_RELEASE_R:
-			HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_7); //Conmutar motor 3
+			HAL_GPIO_TogglePin(EnableMotor3_GPIO_Port, EnableMotor3_Pin); //Conmutar motor 3
 			break;
 		case GP_EVENT_DPAD_PRESS_UP:
 			HAL_TIM_PWM_Start_IT(&htim5, TIM_CHANNEL_4);
-			HAL_GPIO_WritePin(GPIOC, GPIO_PIN_0, GPIO_PIN_RESET);  //Dir arriba
+			HAL_GPIO_WritePin(Dir3_GPIO_Port, Dir3_Pin, GPIO_PIN_RESET); //Dir arriba
 			break;
 		case GP_EVENT_DPAD_RELEASE_UP:
 			if (currentReport.dir == CENTER)
@@ -1235,7 +1210,7 @@ void StartInputChangeTask(void *argument) {
 			break;
 		case GP_EVENT_DPAD_PRESS_DOWN:
 			HAL_TIM_PWM_Start_IT(&htim5, TIM_CHANNEL_4);
-			HAL_GPIO_WritePin(GPIOC, GPIO_PIN_0, GPIO_PIN_SET);  //Dir abajo
+			HAL_GPIO_WritePin(Dir3_GPIO_Port, Dir3_Pin, GPIO_PIN_SET); //Dir abajo
 			break;
 		case GP_EVENT_DPAD_RELEASE_DOWN:
 			if (currentReport.dir == CENTER)
@@ -1246,7 +1221,7 @@ void StartInputChangeTask(void *argument) {
 		case GP_EVENT_LJS_PRESS_UP:
 			//Activar el timer del motor1
 			HAL_TIM_PWM_Start_IT(&htim1, TIM_CHANNEL_4);
-			HAL_GPIO_WritePin(GPIOD, GPIO_PIN_1, GPIO_PIN_SET);  //Dir pos
+			HAL_GPIO_WritePin(Dir1_GPIO_Port, Dir1_Pin, GPIO_PIN_SET); //Dir pos
 			break;
 		case GP_EVENT_LJS_RELEASE_UP:
 			//Desactivar el timer del motor1
@@ -1256,7 +1231,7 @@ void StartInputChangeTask(void *argument) {
 		case GP_EVENT_LJS_PRESS_DOWN:
 			//Activar el timer del motor1
 			HAL_TIM_PWM_Start_IT(&htim1, TIM_CHANNEL_4);
-			HAL_GPIO_WritePin(GPIOD, GPIO_PIN_1, GPIO_PIN_RESET);  //Dir pos
+			HAL_GPIO_WritePin(Dir1_GPIO_Port, Dir1_Pin, GPIO_PIN_RESET); //Dir pos
 			break;
 		case GP_EVENT_LJS_RELEASE_DOWN:
 			//Desactivar el timer del motor1
@@ -1264,7 +1239,7 @@ void StartInputChangeTask(void *argument) {
 				HAL_TIM_PWM_Stop_IT(&htim1, TIM_CHANNEL_4); // Detener el PWM
 			break;
 		case GP_EVENT_RELEASE_ZR:
-			HAL_GPIO_TogglePin(GPIOG, GPIO_PIN_1); //Conmutar motor 1
+			HAL_GPIO_TogglePin(EnableMotor1_GPIO_Port, EnableMotor1_Pin); //Conmutar motor 1
 			break;
 
 		case NOEVENT:
@@ -1293,6 +1268,12 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
 	/* USER CODE BEGIN Callback 1 */
 	if (htim->Instance == TIM3) {
 		funcM4();
+	} else if (htim->Instance == TIM1) {
+		funcM1();
+	} else if (htim->Instance == TIM11) {
+		funcM2();
+	} else if (htim->Instance == TIM5) {
+		funcM3();
 	}
 	/* USER CODE END Callback 1 */
 }
